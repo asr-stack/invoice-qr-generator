@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice QR Generator</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --navy:       #0B1F3A;
+            --navy-mid:   #162D50;
+            --navy-light: #1E3A63;
+            --gold:       #C9A84C;
+            --gold-light: #E2C47A;
+            --gold-pale:  #F7F0DC;
+            --slate:      #4A5568;
+            --slate-light:#718096;
+            --surface:    #F8F9FB;
+            --border:     #E2E6ED;
+            --white:      #FFFFFF;
+            --success:    #1A7F5A;
+            --success-bg: #EAF6F1;
+            --error:      #B91C1C;
+            --error-bg:   #FEF2F2;
+            --radius-sm:  6px;
+            --radius-md:  10px;
+            --radius-lg:  16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background-color: #EEF1F6;
+            background-image:
+                radial-gradient(ellipse 80% 60% at 50% -10%, rgba(11,31,58,0.12) 0%, transparent 70%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 740px;
+            width: 100%;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow:
+                0 1px 3px rgba(0,0,0,0.06),
+                0 8px 32px rgba(11,31,58,0.10),
+                0 32px 64px rgba(11,31,58,0.07);
+            overflow: hidden;
+            animation: slideIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header Bar ── */
+        .header {
+            background: var(--navy);
+            padding: 40px 50px 36px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -40px; right: -40px;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            background: rgba(201,168,76,0.08);
+            pointer-events: none;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -60px; left: -30px;
+            width: 160px; height: 160px;
+            border-radius: 50%;
+            background: rgba(201,168,76,0.05);
+            pointer-events: none;
+        }
+
+        .header-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px; height: 56px;
+            background: rgba(201,168,76,0.15);
+            border: 1.5px solid rgba(201,168,76,0.3);
+            border-radius: var(--radius-md);
+            margin-bottom: 18px;
+            font-size: 26px;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--white);
+            letter-spacing: -0.4px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.55);
+            font-size: 13.5px;
+            font-weight: 400;
+            letter-spacing: 0.1px;
+        }
+
+        /* ── Form Body ── */
+        .form-section {
+            padding: 40px 50px;
+        }
+
+        .form-group {
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--slate);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        /* ── Upload Zones ── */
+        .file-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 26px 20px;
+            border: 1.5px dashed var(--border);
+            border-radius: var(--radius-md);
+            background: var(--surface);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            color: var(--slate-light);
+            font-size: 13.5px;
+            font-weight: 400;
+        }
+
+        .file-input-label .upload-icon {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .file-input-label span {
+            color: var(--slate-light);
+        }
+
+        .file-input-label:hover {
+            border-color: var(--gold);
+            background: var(--gold-pale);
+            color: var(--navy);
+        }
+
+        .file-input-label:hover span {
+            color: var(--navy);
+        }
+
+        .file-input-label.active {
+            border-color: var(--gold);
+            background: var(--gold-pale);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+            font-family: 'DM Mono', monospace;
+            color: var(--success);
+            font-weight: 500;
+            padding-left: 2px;
+        }
+
+        /* ── Divider ── */
+        .section-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0 0 28px;
+        }
+
+        /* ── Button ── */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        button {
+            flex: 1;
+            background: var(--navy);
+            color: var(--white);
+            border: none;
+            padding: 14px 28px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13.5px;
+            font-weight: 600;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(201,168,76,0);
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--navy-light);
+            box-shadow: 0 4px 16px rgba(11,31,58,0.2);
+            transform: translateY(-1px);
+        }
+
+        button:hover::after {
+            background: rgba(201,168,76,0.07);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ── Progress ── */
+        .progress-container {
+            margin: 0 50px 32px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+            height: 4px;
+        }
+
+        .progress {
+            height: 100%;
+            background: var(--gold);
+            border-radius: 99px;
+            transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+            width: 0%;
+        }
+
+        #status {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--slate-light);
+            font-weight: 500;
+        }
+
+        #status.success { color: var(--success); }
+        #status.error   { color: var(--error); }
+
+        /* ── Results ── */
+        #results {
+            padding: 0 50px 40px;
+        }
+
+        .result-card {
+            background: var(--surface);
+            padding: 20px 22px;
+            margin-top: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--navy);
+            transition: box-shadow 0.2s, transform 0.2s;
+            animation: fadeIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-card:hover {
+            box-shadow: 0 4px 16px rgba(11,31,58,0.08);
+            transform: translateY(-1px);
+        }
+
+        .result-card.error {
+            border-left-color: var(--error);
+            background: var(--error-bg);
+            border-color: rgba(185,28,28,0.15);
+        }
+
+        .result-card b {
+            color: var(--navy);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .result-card.error b {
+            color: var(--error);
+        }
+
+        /* ── Action Buttons inside cards ── */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-group a,
+        .btn-group button {
+            text-decoration: none;
+            border: none;
+            padding: 9px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            flex: unset;
+        }
+
+        .btn-download {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(26,127,90,0.2) !important;
+        }
+
+        .btn-download:hover {
+            background: var(--success);
+            color: var(--white);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(26,127,90,0.2);
+        }
+
+        .btn-preview {
+            background: #EBF4FF;
+            color: #1A56A0;
+            border: 1px solid rgba(26,86,160,0.2) !important;
+        }
+
+        .btn-preview:hover {
+            background: #1A56A0;
+            color: var(--white);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(26,86,160,0.2);
+        }
+
+        /* ── Status icons ── */
+        .success-icon::before {
+            content: "✓  ";
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .error-icon::before {
+            content: "✕  ";
+            color: var(--error);
+            font-weight: 700;
+        }
+
+        /* ── Footer strip ── */
+        .footer-strip {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 14px 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-strip p {
+            font-size: 11.5px;
+            color: var(--slate-light);
+            letter-spacing: 0.2px;
+        }
+
+        .footer-strip .brand {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--navy);
+            letter-spacing: 0.5px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .header       { padding: 30px 24px 28px; }
+            .form-section { padding: 28px 24px; }
+            .progress-container { margin: 0 24px 28px; }
+            #results      { padding: 0 24px 32px; }
+            .footer-strip { padding: 12px 24px; }
+
+            h1 { font-size: 21px; }
+
+            .button-group { flex-direction: column; }
+
+            .btn-group { flex-direction: column; }
+            .btn-group a,
+            .btn-group button { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="header-icon">📋</div>
+            <h1>Invoice QR Generator</h1>
+            <div class="subtitle">
+                Transform your invoices with automated QR codes
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="form-section">
+
+            <!-- Excel Upload -->
+            <div class="form-group">
+
+                <label for="dataFile">
+                    📊 Upload Excel File
+                </label>
+
+                <div class="file-input-wrapper">
+
+                    <label for="dataFile"
+                           class="file-input-label"
+                           id="excelLabel">
+
+                        <span class="upload-icon">📁</span>
+                        <span>
+                            Click to upload or drag & drop your Excel file
+                        </span>
+
+                    </label>
+
+                    <input type="file"
+                           id="dataFile"
+                           accept=".xlsx,.xls,.csv">
+
+                    <div class="file-name"
+                         id="excelFileName">
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Word Upload -->
+            <div class="form-group">
+
+                <label for="templateFile">
+                    📄 Upload Word Templates
+                </label>
+
+                <div class="file-input-wrapper">
+
+                    <label for="templateFile"
+                           class="file-input-label"
+                           id="wordLabel">
+
+                        <span class="upload-icon">📁</span>
+                        <span>
+                            Click to upload or drag & drop Word templates
+                        </span>
+
+                    </label>
+
+                    <input type="file"
+                           id="templateFile"
+                           multiple
+                           accept=".docx,.doc">
+
+                    <div class="file-name"
+                         id="wordFileName">
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- Submit -->
+            <div class="button-group">
+
+                <button onclick="uploadFiles()"
+                        id="submitBtn">
+
+                    Process Files
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-container"
+             id="progressContainer">
+
+            <div class="progress-bar">
+
+                <div class="progress"
+                     id="progress">
+                </div>
+
+            </div>
+
+            <p id="status"></p>
+
+        </div>
+
+        <!-- Results -->
+        <div id="results"></div>
+
+        <!-- Footer -->
+        <div class="footer-strip">
+            <p>Supports .xlsx · .xls · .csv · .docx · .doc</p>
+            <span class="brand">INVOICE QR</span>
+        </div>
+
+    </div>
+
+<script>
+
+    // -----------------------------------
+    // FILE INPUT REFERENCES
+    // -----------------------------------
+
+    const dataFileInput = document.getElementById('dataFile');
+    const templateFileInput = document.getElementById('templateFile');
+
+    const excelLabel = document.getElementById('excelLabel');
+    const wordLabel = document.getElementById('wordLabel');
+
+    // -----------------------------------
+    // FILE SELECTION EVENTS
+    // -----------------------------------
+
+    dataFileInput.addEventListener('change', function () {
+        updateFileName('excelFileName', this.files);
+    });
+
+    templateFileInput.addEventListener('change', function () {
+        updateFileName('wordFileName', this.files);
+    });
+
+    // -----------------------------------
+    // EXCEL DRAG & DROP
+    // -----------------------------------
+
+    excelLabel.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        excelLabel.classList.add('active');
+    });
+
+    excelLabel.addEventListener('dragleave', () => {
+        excelLabel.classList.remove('active');
+    });
+
+    excelLabel.addEventListener('drop', (e) => {
+
+        e.preventDefault();
+
+        excelLabel.classList.remove('active');
+
+        dataFileInput.files = e.dataTransfer.files;
+
+        updateFileName(
+            'excelFileName',
+            e.dataTransfer.files
+        );
+
+    });
+
+    // -----------------------------------
+    // WORD DRAG & DROP
+    // -----------------------------------
+
+    wordLabel.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        wordLabel.classList.add('active');
+    });
+
+    wordLabel.addEventListener('dragleave', () => {
+        wordLabel.classList.remove('active');
+    });
+
+    wordLabel.addEventListener('drop', (e) => {
+
+        e.preventDefault();
+
+        wordLabel.classList.remove('active');
+
+        templateFileInput.files = e.dataTransfer.files;
+
+        updateFileName(
+            'wordFileName',
+            e.dataTransfer.files
+        );
+
+    });
+
+    // -----------------------------------
+    // UPDATE FILE NAMES
+    // -----------------------------------
+
+    function updateFileName(elementId, files) {
+
+        const element = document.getElementById(elementId);
+
+        if (!files || files.length === 0) {
+            element.textContent = '';
+            return;
+        }
+
+        if (files.length === 1) {
+
+            element.textContent =
+                '✓ ' + files[0].name;
+
+        } else {
+
+            element.textContent =
+                '✓ ' + files.length + ' files selected';
+
+        }
+    }
+
+    // -----------------------------------
+    // MAIN UPLOAD FUNCTION
+    // -----------------------------------
+
+    async function uploadFiles() {
+
+        const dataFile =
+            document.getElementById("dataFile").files[0];
+
+        const templateFiles =
+            document.getElementById("templateFile").files;
+
+        // Validation
+        if (!dataFile || templateFiles.length === 0) {
+
+            const status =
+                document.getElementById("status");
+
+            status.innerText =
+                "⚠️ Please upload all required files";
+
+            status.classList.add('error');
+
+            return;
+        }
+
+        // Form Data
+        const formData = new FormData();
+
+        formData.append("data_file", dataFile);
+
+        for (let i = 0; i < templateFiles.length; i++) {
+
+            formData.append(
+                "templates",
+                templateFiles[i]
+            );
+        }
+
+        // UI Elements
+        const progressContainer =
+            document.getElementById("progressContainer");
+
+        const progress =
+            document.getElementById("progress");
+
+        const submitBtn =
+            document.getElementById("submitBtn");
+
+        const statusElement =
+            document.getElementById("status");
+
+        // Start Progress
+        progressContainer.style.display = "block";
+
+        progress.style.width = "10%";
+
+        submitBtn.disabled = true;
+
+        statusElement.innerText =
+            "⏳ Processing your files...";
+
+        statusElement.classList.remove(
+            'success',
+            'error'
+        );
+
+        try {
+
+            // Upload
+            const res = await fetch("/upload/", {
+                method: "POST",
+                body: formData
+            });
+
+            progress.style.width = "70%";
+
+            const data = await res.json();
+
+            progress.style.width = "100%";
+
+            setTimeout(() => {
+
+                progressContainer.style.display = "none";
+
+                submitBtn.disabled = false;
+
+            }, 800);
+
+            statusElement.innerText =
+                "✅ Processing complete!";
+
+            statusElement.classList.add('success');
+
+            // Results
+            const container =
+                document.getElementById("results");
+
+            container.innerHTML = "";
+
+            data.results.forEach(item => {
+
+                // SUCCESS
+            if (item.status === "Success") {
+
+                container.innerHTML += `
+
+                <div class="result-card">
+
+                    <b class="success-icon">
+                        ${item.file}
+                    </b>
+
+                    <div class="btn-group">
+
+                        <a class="btn-download"
+                         href="/download/${item.docx}"
+                        download>
+
+                             📥 Download Document
+
+                        </a>
+
+                    </div>
+
+                </div>
+             `;
+            }
+
+                // ERROR
+                else {
+
+                    container.innerHTML += `
+
+                        <div class="result-card error">
+
+                            <b class="error-icon">
+                                ${item.file}
+                            </b>
+
+                            <p style="
+                                margin-top:10px;
+                                color:#dc3545;
+                            ">
+
+                                ${item.status}
+
+                            </p>
+
+                        </div>
+                    `;
+                }
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            statusElement.innerText =
+                "❌ An error occurred while processing files";
+
+            statusElement.classList.add('error');
+
+            submitBtn.disabled = false;
+
+            progressContainer.style.display = "none";
+        }
+    }
+
+</script>
+
+</body>
+
+
+</html>
