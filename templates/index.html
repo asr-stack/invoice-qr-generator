@@ -447,6 +447,32 @@
             .btn-group a,
             .btn-group button { width: 100%; justify-content: center; }
         }
+
+        .btn-download-all {
+
+            display: inline-block;
+
+            padding: 12px 24px;
+
+            border-radius: 10px;
+
+            background: #198754;
+
+            color: white;
+
+            text-decoration: none;
+
+            font-weight: 600;
+
+            transition: 0.3s;
+        }
+
+        .btn-download-all:hover {
+
+            background: #157347;
+
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 
@@ -563,6 +589,12 @@
 
         <!-- Results -->
         <div id="results"></div>
+
+        <div id="downloadAllContainer" style="display:none; text-align:center; margin:20px 0;">
+             <a href="/download-all/" class="btn-download-all">
+                 📦 Download All Files
+             </a>
+        </div>
 
         <!-- Footer -->
         <div class="footer-strip">
@@ -777,6 +809,10 @@
                 document.getElementById("results");
 
             container.innerHTML = "";
+
+            document.getElementById(
+             "downloadAllContainer"
+            ).style.display = "block";
 
             data.results.forEach(item => {
 

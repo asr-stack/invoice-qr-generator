@@ -75,11 +75,18 @@ def extract_invoice_number(file):
     print("❌ Invoice not found")
     return None
 
-def generate_qr(irn):
-    img = qrcode.make(irn)
+def generate_qr(irn, ack_no, ack_date):
+
+    qr_data = (
+        f"IRN : {irn}\n\n"
+        f"ACK NO : {ack_no}\n\n"
+        f"DATE : {ack_date}"
+    )
+
+    img = qrcode.make(qr_data)
 
     qr_bytes = BytesIO()
-    img.save(qr_bytes, format='PNG')
+    img.save(qr_bytes, format="PNG")
 
     qr_bytes.seek(0)
 

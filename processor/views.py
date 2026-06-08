@@ -4,6 +4,8 @@ from django.views.decorators.csrf import csrf_exempt
 import tempfile
 import os
 import re
+import zipfile
+from io import BytesIO
 
 from .utils import (
     read_excel,
@@ -28,6 +30,19 @@ def upload_files(request):
         # Read Excel mapping
         excel_map = read_excel(data_file)
 
+        # Remove old PDFs from output folder
+        output_folder = "media/output"
+
+        if os.path.exists(output_folder):
+
+            for file in os.listdir(output_folder):
+
+                if file.lower().endswith(".pdf"):
+
+                    os.remove(
+                        os.path.join(output_folder, file)
+                    )
+
         results = []
 
         for template in templates:
@@ -41,10 +56,7 @@ def upload_files(request):
                     tmp.write(template.read())
                     temp_docx_path = tmp.name
 
-                # -----------------------------------
                 # STEP 1 → Try filename extraction
-                # -----------------------------------
-
                 match = re.search(r'Invoice_(\d+)', template.name)
 
                 if match:
@@ -52,16 +64,9 @@ def upload_files(request):
                     print("✅ Invoice from filename:", invoice_no)
 
                 else:
-                    # -----------------------------------
-                    # STEP 2 → Fallback DOCX extraction
-                    # -----------------------------------
-
                     invoice_no = extract_invoice_number(temp_docx_path)
 
-                # -----------------------------------
-                # STEP 3 → Validate invoice
-                # -----------------------------------
-
+                # STEP 2 → Validate invoice
                 if invoice_no is None:
 
                     results.append({
@@ -71,10 +76,7 @@ def upload_files(request):
 
                     continue
 
-                # -----------------------------------
-                # STEP 4 → Match Excel data
-                # -----------------------------------
-
+                # STEP 3 → Match Excel data
                 data = excel_map.get(invoice_no)
 
                 if data is None:
@@ -90,16 +92,14 @@ def upload_files(request):
                 ack_no = data["ack_no"]
                 ack_date = data["ack_date"]
 
-                # -----------------------------------
-                # STEP 5 → Generate QR
-                # -----------------------------------
+                # STEP 4 → Generate QR
+                qr_image = generate_qr(
+                    irn,
+                    ack_no,
+                    ack_date
+                )
 
-                qr_image = generate_qr(irn)
-
-                # -----------------------------------
-                # STEP 6 → Insert QR into DOCX
-                # -----------------------------------
-
+                # STEP 5 → Insert QR into DOCX
                 final_docx = insert_qr_into_docx(
                     temp_docx_path,
                     qr_image,
@@ -108,10 +108,6 @@ def upload_files(request):
                     ack_date,
                     template.name
                 )
-
-                # -----------------------------------
-                # STEP 7 → Success response
-                # -----------------------------------
 
                 results.append({
                     "file": template.name,
@@ -148,4 +144,42 @@ def download_file(request, filename):
     return FileResponse(
         open(file_path, 'rb'),
         as_attachment=True
+    )
+
+def download_all(request):
+
+    output_folder = "media/output"
+
+    zip_buffer = BytesIO()
+
+    with zipfile.ZipFile(
+        zip_buffer,
+        "w",
+        zipfile.ZIP_DEFLATED
+    ) as zip_file:
+
+        for filename in os.listdir(output_folder):
+
+            # Only include DOCX files
+            if not filename.lower().endswith(".docx"):
+                continue
+
+            file_path = os.path.join(
+                output_folder,
+                filename
+            )
+
+            if os.path.isfile(file_path):
+
+                zip_file.write(
+                    file_path,
+                    arcname=filename
+                )
+
+    zip_buffer.seek(0)
+
+    return FileResponse(
+        zip_buffer,
+        as_attachment=True,
+        filename="Processed_Invoices.zip"
     )
