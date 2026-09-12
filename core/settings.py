@@ -25,6 +25,13 @@ ALLOWED_HOSTS = [
     ).split(',') if host.strip()
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS',
+        'http://localhost:8000,https://localhost:8000,http://127.0.0.1:8000,https://127.0.0.1:8000,https://*.onrender.com'
+    ).split(',') if origin.strip()
+]
+
 MAX_UPLOAD_SIZE = int(os.environ.get('MAX_UPLOAD_SIZE', 10 * 1024 * 1024))
 TEMP_FILE_RETENTION_HOURS = int(os.environ.get('TEMP_FILE_RETENTION_HOURS', 1))
 
@@ -32,6 +39,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE
 FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE
 
 SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() in {'1', 'true', 'yes', 'on'}
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_BROWSER_XSS_FILTER = True
