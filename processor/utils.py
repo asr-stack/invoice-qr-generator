@@ -20,6 +20,9 @@ def read_excel(file):
     irn_col = None
     ack_no_col = None
     ack_date_col = None
+    doc_type_col = None
+    doc_date_col = None
+    inv_value_col = None
 
     for col in df.columns:
         if "doc no" in col:
@@ -30,21 +33,37 @@ def read_excel(file):
             ack_no_col = col
         elif "ack date" in col:
             ack_date_col = col
+        elif "doc typ" in col:
+            doc_type_col = col
+        elif "doc date" in col:
+            doc_date_col = col
+        elif "inv value" in col:
+            inv_value_col = col
 
-    if not all([doc_col, irn_col, ack_no_col, ack_date_col]):
+    if not all([doc_col, irn_col, ack_no_col, ack_date_col, doc_type_col, doc_date_col, inv_value_col]):
         raise Exception("Missing required columns")
 
-    print("Using columns:", doc_col, irn_col, ack_no_col, ack_date_col)
+    print("Using columns:", doc_col, irn_col, ack_no_col, ack_date_col, doc_type_col, doc_date_col, inv_value_col)
 
     df[doc_col] = df[doc_col].astype(str).str.strip()
 
     mapping = {}
 
     for _, row in df.iterrows():
+        inv_value = row[inv_value_col]
+        if pd.isna(inv_value):
+            inv_value_str = ''
+        else:
+            inv_value_str = format(float(inv_value), '.2f') if isinstance(inv_value, (int, float)) else str(inv_value).strip()
+
         mapping[row[doc_col]] = {
+            "doc_no": str(row[doc_col]).strip(),
             "irn": str(row[irn_col]).strip(),
             "ack_no": str(row[ack_no_col]).strip(),
-            "ack_date": str(row[ack_date_col]).strip()
+            "ack_date": str(row[ack_date_col]).strip(),
+            "doc_type": str(row[doc_type_col]).strip(),
+            "doc_date": str(row[doc_date_col]).strip(),
+            "inv_value": inv_value_str,
         }
 
     print("Mapping:", mapping)
@@ -75,14 +94,19 @@ def extract_invoice_number(file):
     print("❌ Invoice not found")
     return None
 
-def generate_qr(irn, ack_no, ack_date):
-
-    qr_data = (
+def build_qr_payload(irn, ack_no, ack_date, doc_no=None, doc_date=None, inv_value=None):
+    return (
         f"IRN : {irn}\n\n"
         f"ACK NO : {ack_no}\n\n"
-        f"DATE : {ack_date}"
+        f"DATE : {ack_date}\n\n"
+        f"Doc No. : {doc_no or ''}\n\n"
+        f"Doc Date : {doc_date or ''}\n\n"
+        f"Inv Value : {inv_value or ''}"
     )
 
+
+def generate_qr(irn, ack_no, ack_date, doc_no=None, doc_date=None, inv_value=None):
+    qr_data = build_qr_payload(irn, ack_no, ack_date, doc_no, doc_date, inv_value)
     img = qrcode.make(qr_data)
 
     qr_bytes = BytesIO()
@@ -94,7 +118,7 @@ def generate_qr(irn, ack_no, ack_date):
 
 
 
-def insert_qr_into_docx(input_docx_path, qr_image, irn, ack_no, ack_date, original_name):
+def insert_qr_into_docx(input_docx_path, qr_image, irn, ack_no, ack_date, original_name, output_dir=None):
     doc = Document(input_docx_path)
 
     inserted = False
@@ -173,7 +197,7 @@ def insert_qr_into_docx(input_docx_path, qr_image, irn, ack_no, ack_date, origin
             r.font.size = Pt(7)
 
     # 👉 SAVE FILE
-    output_folder = "media/output"
+    output_folder = output_dir or os.path.abspath("media/output")
     os.makedirs(output_folder, exist_ok=True)
 
     name, ext = os.path.splitext(original_name)

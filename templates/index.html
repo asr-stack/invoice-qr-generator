@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -201,6 +202,23 @@
             color: var(--success);
             font-weight: 500;
             padding-left: 2px;
+        }
+
+        .file-error {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: var(--error-bg);
+            border: 1px solid rgba(185, 28, 28, 0.2);
+            color: var(--error);
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .file-error.visible {
+            display: block;
         }
 
         /* ── Divider ── */
@@ -473,10 +491,30 @@
 
             transform: translateY(-2px);
         }
+
+        .btn-clear-all {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 10px;
+            background: #b91c1c;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-clear-all:hover {
+            background: #991b1b;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 
 <body>
+
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
     <div class="container">
 
@@ -495,13 +533,13 @@
             <!-- Excel Upload -->
             <div class="form-group">
 
-                <label for="dataFile">
+                <label for="excelFileInput">
                     📊 Upload Excel File
                 </label>
 
                 <div class="file-input-wrapper">
 
-                    <label for="dataFile"
+                    <label for="excelFileInput"
                            class="file-input-label"
                            id="excelLabel">
 
@@ -513,12 +551,14 @@
                     </label>
 
                     <input type="file"
-                           id="dataFile"
-                           accept=".xlsx,.xls,.csv">
+                           id="excelFileInput"
+                           accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
 
                     <div class="file-name"
                          id="excelFileName">
                     </div>
+
+                    <div class="file-error" id="excelError"></div>
 
                 </div>
             </div>
@@ -526,13 +566,13 @@
             <!-- Word Upload -->
             <div class="form-group">
 
-                <label for="templateFile">
+                <label for="wordFileInput">
                     📄 Upload Word Templates
                 </label>
 
                 <div class="file-input-wrapper">
 
-                    <label for="templateFile"
+                    <label for="wordFileInput"
                            class="file-input-label"
                            id="wordLabel">
 
@@ -544,13 +584,15 @@
                     </label>
 
                     <input type="file"
-                           id="templateFile"
+                           id="wordFileInput"
                            multiple
-                           accept=".docx,.doc">
+                           accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 
                     <div class="file-name"
                          id="wordFileName">
                     </div>
+
+                    <div class="file-error" id="wordError"></div>
 
                 </div>
             </div>
@@ -560,7 +602,7 @@
             <!-- Submit -->
             <div class="button-group">
 
-                <button onclick="uploadFiles()"
+                <button type="button"
                         id="submitBtn">
 
                     Process Files
@@ -594,299 +636,20 @@
              <a href="/download-all/" class="btn-download-all">
                  📦 Download All Files
              </a>
+             <button type="button" id="clearAllBtn" class="btn-clear-all">
+                 🗑 Clear All
+             </button>
         </div>
 
         <!-- Footer -->
         <div class="footer-strip">
-            <p>Supports .xlsx · .xls · .csv · .docx · .doc</p>
+            <p>Supports .xlsx · .xls · .docx</p>
             <span class="brand">INVOICE QR</span>
         </div>
 
     </div>
 
-<script>
-
-    // -----------------------------------
-    // FILE INPUT REFERENCES
-    // -----------------------------------
-
-    const dataFileInput = document.getElementById('dataFile');
-    const templateFileInput = document.getElementById('templateFile');
-
-    const excelLabel = document.getElementById('excelLabel');
-    const wordLabel = document.getElementById('wordLabel');
-
-    // -----------------------------------
-    // FILE SELECTION EVENTS
-    // -----------------------------------
-
-    dataFileInput.addEventListener('change', function () {
-        updateFileName('excelFileName', this.files);
-    });
-
-    templateFileInput.addEventListener('change', function () {
-        updateFileName('wordFileName', this.files);
-    });
-
-    // -----------------------------------
-    // EXCEL DRAG & DROP
-    // -----------------------------------
-
-    excelLabel.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        excelLabel.classList.add('active');
-    });
-
-    excelLabel.addEventListener('dragleave', () => {
-        excelLabel.classList.remove('active');
-    });
-
-    excelLabel.addEventListener('drop', (e) => {
-
-        e.preventDefault();
-
-        excelLabel.classList.remove('active');
-
-        dataFileInput.files = e.dataTransfer.files;
-
-        updateFileName(
-            'excelFileName',
-            e.dataTransfer.files
-        );
-
-    });
-
-    // -----------------------------------
-    // WORD DRAG & DROP
-    // -----------------------------------
-
-    wordLabel.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        wordLabel.classList.add('active');
-    });
-
-    wordLabel.addEventListener('dragleave', () => {
-        wordLabel.classList.remove('active');
-    });
-
-    wordLabel.addEventListener('drop', (e) => {
-
-        e.preventDefault();
-
-        wordLabel.classList.remove('active');
-
-        templateFileInput.files = e.dataTransfer.files;
-
-        updateFileName(
-            'wordFileName',
-            e.dataTransfer.files
-        );
-
-    });
-
-    // -----------------------------------
-    // UPDATE FILE NAMES
-    // -----------------------------------
-
-    function updateFileName(elementId, files) {
-
-        const element = document.getElementById(elementId);
-
-        if (!files || files.length === 0) {
-            element.textContent = '';
-            return;
-        }
-
-        if (files.length === 1) {
-
-            element.textContent =
-                '✓ ' + files[0].name;
-
-        } else {
-
-            element.textContent =
-                '✓ ' + files.length + ' files selected';
-
-        }
-    }
-
-    // -----------------------------------
-    // MAIN UPLOAD FUNCTION
-    // -----------------------------------
-
-    async function uploadFiles() {
-
-        const dataFile =
-            document.getElementById("dataFile").files[0];
-
-        const templateFiles =
-            document.getElementById("templateFile").files;
-
-        // Validation
-        if (!dataFile || templateFiles.length === 0) {
-
-            const status =
-                document.getElementById("status");
-
-            status.innerText =
-                "⚠️ Please upload all required files";
-
-            status.classList.add('error');
-
-            return;
-        }
-
-        // Form Data
-        const formData = new FormData();
-
-        formData.append("data_file", dataFile);
-
-        for (let i = 0; i < templateFiles.length; i++) {
-
-            formData.append(
-                "templates",
-                templateFiles[i]
-            );
-        }
-
-        // UI Elements
-        const progressContainer =
-            document.getElementById("progressContainer");
-
-        const progress =
-            document.getElementById("progress");
-
-        const submitBtn =
-            document.getElementById("submitBtn");
-
-        const statusElement =
-            document.getElementById("status");
-
-        // Start Progress
-        progressContainer.style.display = "block";
-
-        progress.style.width = "10%";
-
-        submitBtn.disabled = true;
-
-        statusElement.innerText =
-            "⏳ Processing your files...";
-
-        statusElement.classList.remove(
-            'success',
-            'error'
-        );
-
-        try {
-
-            // Upload
-            const res = await fetch("/upload/", {
-                method: "POST",
-                body: formData
-            });
-
-            progress.style.width = "70%";
-
-            const data = await res.json();
-
-            progress.style.width = "100%";
-
-            setTimeout(() => {
-
-                progressContainer.style.display = "none";
-
-                submitBtn.disabled = false;
-
-            }, 800);
-
-            statusElement.innerText =
-                "✅ Processing complete!";
-
-            statusElement.classList.add('success');
-
-            // Results
-            const container =
-                document.getElementById("results");
-
-            container.innerHTML = "";
-
-            document.getElementById(
-             "downloadAllContainer"
-            ).style.display = "block";
-
-            data.results.forEach(item => {
-
-                // SUCCESS
-            if (item.status === "Success") {
-
-                container.innerHTML += `
-
-                <div class="result-card">
-
-                    <b class="success-icon">
-                        ${item.file}
-                    </b>
-
-                    <div class="btn-group">
-
-                        <a class="btn-download"
-                         href="/download/${item.docx}"
-                        download>
-
-                             📥 Download Document
-
-                        </a>
-
-                    </div>
-
-                </div>
-             `;
-            }
-
-                // ERROR
-                else {
-
-                    container.innerHTML += `
-
-                        <div class="result-card error">
-
-                            <b class="error-icon">
-                                ${item.file}
-                            </b>
-
-                            <p style="
-                                margin-top:10px;
-                                color:#dc3545;
-                            ">
-
-                                ${item.status}
-
-                            </p>
-
-                        </div>
-                    `;
-                }
-
-            });
-
-        }
-
-        catch (error) {
-
-            console.error(error);
-
-            statusElement.innerText =
-                "❌ An error occurred while processing files";
-
-            statusElement.classList.add('error');
-
-            submitBtn.disabled = false;
-
-            progressContainer.style.display = "none";
-        }
-    }
-
-</script>
+<script src="{% static 'js/invoice_qr.js' %}"></script>
 
 </body>
 
